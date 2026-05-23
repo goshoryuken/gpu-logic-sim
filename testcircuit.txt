@@ -1,0 +1,6 @@
+INPUT a
+INPUT b
+INPUT c
+GATE g1 AND a b
+GATE g2 OR g1 c
+OUTPUT g2
