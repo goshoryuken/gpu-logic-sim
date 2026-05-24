@@ -8,6 +8,7 @@ struct Gate {
     string name;
     string type;
     vector<string> inputs;
+    int level = -1;
 };
 
 struct Netlist {
