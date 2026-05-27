@@ -4,6 +4,9 @@ $var wire 1 b b $end
 $var wire 1 c c $end
 $var wire 1 g1 g1 $end
 $var wire 1 g2 g2 $end
+$var wire 1 g3 g3 $end
+$var wire 1 g4 g4 $end
+$var wire 1 g5 g5 $end
 $enddefinitions $end
 #0
 0a
@@ -11,15 +14,24 @@ $enddefinitions $end
 0c
 0g1
 0g2
+1g3
+0g4
+1g5
 #1
 1a
 0b
 1c
 0g1
 1g2
+0g3
+0g4
+0g5
 #2
 1a
 1b
 0c
 1g1
 1g2
+0g3
+1g4
+1g5
