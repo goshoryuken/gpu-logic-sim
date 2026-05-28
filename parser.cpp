@@ -1,7 +1,69 @@
 #include "netlist.h"
 #include <fstream>
 #include <sstream>
+#include <set>
+#include <cctype>
 
+void replaceJunk(string& s) {
+    for (char& c : s) {
+        if (c == '(' || c == ')' || c == ',' || c == ';') c = ' ';
+    }
+    
+}
+
+Netlist parseVerilog(string filename) {
+    ifstream file(filename);
+    string line;
+
+    Netlist netlist;
+    set<string> gates = {"and", "or", "not", "nand", "nor", "xor"};
+
+    while (getline(file, line)) {
+        replaceJunk(line);
+        stringstream ss(line);
+        
+        string word;
+        
+        ss >> word; //grabs first word
+
+        if (gates.count(word)) {
+            
+
+            Gate gate;
+            string name = word;
+
+            //convert uppercase
+            for (auto& c: name) {
+                c = std::toupper(static_cast<unsigned char>(c));
+            }
+
+            gate.type = name;
+
+            ss >> word; //instance name, skip
+            ss >> word; //now on gate name
+
+            gate.name = word;
+
+            while (ss >> word) { //reads the rest of the line to find the inputs;
+                gate.inputs.push_back(word);
+            }
+
+            netlist.gates.push_back(gate);
+
+        } else if (word == "input") {
+            while (ss >> word) {
+                if (word == "logic") continue;
+                netlist.inputs.push_back(word);
+            }
+        } else if (word == "output") {
+            while (ss >> word) {
+                if (word == "logic") continue;
+                netlist.outputs.push_back(word);
+            }
+        }
+    }
+    return netlist;
+}
 
 Netlist parseNetlist(string filename) {
     ifstream file(filename);

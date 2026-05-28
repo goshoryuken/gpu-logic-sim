@@ -7,7 +7,7 @@
 #include "vcd.h"
 
 int main() {
-    Netlist netlist = parseNetlist("testcircuit.txt");
+    Netlist netlist = parseVerilog("circuit.sv");
     levelizeNetlist(netlist);
     map<string, int> inputValues;
     inputValues["a"] = 1;
