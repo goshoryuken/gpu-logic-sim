@@ -1,6 +1,8 @@
 #pragma once
 #include "netlist.h"
 
-Netlist parseNetlist(string filename);
+Netlist parseNetlist(const string& filename);
 
-Netlist parseVerilog(string filename);
+Netlist parseVerilog(const string& filename);
+
+void assignSignalIDs(Netlist& netlist);

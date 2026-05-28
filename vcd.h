@@ -3,4 +3,4 @@
 #include <map>
 
 
-void writeVCD(string filename, Netlist& netlist, vector<map<string,int>> allSignals);
+void writeVCD(const string& filename, const Netlist& netlist, const vector<vector<int>>& allSignals);

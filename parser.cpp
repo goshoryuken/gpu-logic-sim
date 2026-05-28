@@ -11,7 +11,7 @@ void replaceJunk(string& s) {
     
 }
 
-Netlist parseVerilog(string filename) {
+Netlist parseVerilog(const string& filename) {
     ifstream file(filename);
     string line;
 
@@ -65,7 +65,7 @@ Netlist parseVerilog(string filename) {
     return netlist;
 }
 
-Netlist parseNetlist(string filename) {
+Netlist parseNetlist(const string& filename) {
     ifstream file(filename);
     string line;
 
@@ -103,4 +103,25 @@ Netlist parseNetlist(string filename) {
         }
     }
     return netlist;
+}
+
+void assignSignalIDs(Netlist& netlist) {
+    int id = 0;
+    for (int i = 0; i < netlist.inputs.size(); i++) {
+        netlist.signalIDs[netlist.inputs[i]] = id;
+        id++;
+    }
+
+    for (int j = 0; j < netlist.gates.size(); j++) {
+        netlist.signalIDs[netlist.gates[j].name] = id;
+        id++;
+    }
+
+    for (Gate& gate : netlist.gates) {
+        gate.outputID = netlist.signalIDs[gate.name];
+
+        for (string s : gate.inputs) {
+            gate.inputIDs.push_back(netlist.signalIDs[s]);
+        }
+    }
 }

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 
-void writeVCD(string filename, Netlist& netlist, vector<map<string,int>> allSignals) {
+void writeVCD(const string& filename, const Netlist& netlist, const vector<vector<int>>& allSignals) {
     ofstream file(filename);
 
     file << "$timescale 1ns $end\n";
@@ -11,7 +11,7 @@ void writeVCD(string filename, Netlist& netlist, vector<map<string,int>> allSign
         file << "$var wire 1 " << s << " " << s << " $end\n";
     }
 
-    for (Gate& g : netlist.gates) {
+    for (const Gate& g : netlist.gates) {
         file << "$var wire 1 " << g.name << " " << g.name << " $end\n";
     }
 
@@ -22,11 +22,11 @@ void writeVCD(string filename, Netlist& netlist, vector<map<string,int>> allSign
         file << "#" << i << "\n";
 
         for (string s : netlist.inputs) {
-            file << allSignals[i][s] << s << "\n";
+            file << allSignals[i][netlist.signalIDs.at(s)] << s << "\n";
         }
 
-        for (Gate& g : netlist.gates) {
-            file << allSignals[i][g.name] << g.name << "\n";
+        for (const Gate& g : netlist.gates) {
+            file << allSignals[i][g.outputID] << g.name << "\n";
         }
     }
 

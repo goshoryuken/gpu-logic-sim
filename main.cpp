@@ -8,12 +8,14 @@
 
 int main() {
     Netlist netlist = parseVerilog("circuit.sv");
+
+    assignSignalIDs(netlist);
     levelizeNetlist(netlist);
     map<string, int> inputValues;
     inputValues["a"] = 1;
     inputValues["b"] = 0;
     inputValues["c"] = 1;
-    map<string, int> signals = simulate(netlist, inputValues);
+    vector<int> signals = simulate(netlist, inputValues);
 
     
     
@@ -38,12 +40,13 @@ int main() {
     }
 
     for (string out : netlist.outputs) {
-        printf("%s = %d\n", out.c_str(), signals[out]);
+        int signal_index = netlist.signalIDs[out];
+        printf("%s = %d\n", out.c_str(), signals[signal_index]);
     }
 
 
     //testing VCD output
-    vector<map<string, int>> allSignals;
+    vector<vector<int>> allSignals;
 
     map<string, int> in1;
     in1["a"] = 0; in1["b"] = 0; in1["c"] = 0;

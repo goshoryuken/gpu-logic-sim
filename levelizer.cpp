@@ -55,4 +55,9 @@ void levelizeNetlist(Netlist& netlist) {
         gate.level = levelMap[gate.name];
     }
 
+    //sort the circuit
+    sort(netlist.gates.begin(), netlist.gates.end(), [](Gate& a, Gate& b) {
+        return a.level < b.level;
+    });
+
 }
