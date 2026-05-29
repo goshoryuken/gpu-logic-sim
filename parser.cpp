@@ -60,6 +60,22 @@ Netlist parseVerilog(const string& filename) {
                 if (word == "logic") continue;
                 netlist.outputs.push_back(word);
             }
+        } else if (word == "$_DFF_P_" || word == "$_DFF_N_") { // handling DFF's
+            Gate gate;
+            gate.type = "DFF";
+            while (ss >> word) {
+                if (word == ".D") {
+                    ss >> word;
+                    gate.inputs.push_back(word);
+                } else if (word == ".Q") {
+                    ss >> word; 
+                    gate.name = word;
+                } else if (word == ".C") {
+                    ss >> word;
+                }
+            }
+
+            netlist.dffs.push_back(gate);
         }
     }
     return netlist;
@@ -117,7 +133,20 @@ void assignSignalIDs(Netlist& netlist) {
         id++;
     }
 
+    for (int k = 0; k < netlist.dffs.size(); k++) {
+        netlist.signalIDs[netlist.dffs[k].name] = id;
+        id++;
+    }
+
     for (Gate& gate : netlist.gates) {
+        gate.outputID = netlist.signalIDs[gate.name];
+
+        for (string s : gate.inputs) {
+            gate.inputIDs.push_back(netlist.signalIDs[s]);
+        }
+    }
+
+    for (Gate& gate : netlist.dffs) {
         gate.outputID = netlist.signalIDs[gate.name];
 
         for (string s : gate.inputs) {

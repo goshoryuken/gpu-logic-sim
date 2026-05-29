@@ -19,4 +19,5 @@ struct Netlist {
     vector<string> outputs;
     map<string, int> signalIDs;
     vector<Gate> gates;
+    vector<Gate> dffs;
 };
