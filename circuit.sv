@@ -1,10 +1,10 @@
-module circuit(a, b, c, out);
-  wire _0_;
-  input a;
-  input b;
-  input c;
-  output out;
+module circuit(clk, q);
+  input clk;
+  output q;
+  wire d;
 
-  and _2_(_0_, a, b);
-  or _3_(out, _0_, c);
+  $_DFF_P_ ff1 (.C(clk), .D(d), .Q(q));
+  not inv1(d, q);
+
+  
 endmodule

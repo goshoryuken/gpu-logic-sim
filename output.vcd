@@ -1,25 +1,21 @@
 $timescale 1ns $end
-$var wire 1 a a $end
-$var wire 1 b b $end
-$var wire 1 c c $end
-$var wire 1 _0_ _0_ $end
-$var wire 1 out out $end
+$var wire 1 clk clk $end
+$var wire 1 d d $end
+$var wire 1 q q $end
 $enddefinitions $end
 #0
-0a
-0b
-0c
-0_0_
-0out
+0clk
+1d
+1q
 #1
-1a
-0b
-1c
-0_0_
-1out
+0clk
+0d
+0q
 #2
-1a
-1b
-0c
-1_0_
-1out
+0clk
+1d
+1q
+#3
+0clk
+0d
+0q

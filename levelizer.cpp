@@ -29,6 +29,11 @@ void levelizeNetlist(Netlist& netlist) {
         levelMap[str] = 0;
     }
 
+    for (Gate& gate : netlist.dffs) {
+        q.push(gate.name);
+        levelMap[gate.name] = 0;
+    }
+
 
     while (!q.empty()) {
         //grab the signal from the front
@@ -50,11 +55,14 @@ void levelizeNetlist(Netlist& netlist) {
             }
         }
     }
+
+    
     //then loop thru the gates to assign the correct level to each
     for (Gate& gate : netlist.gates) {
         gate.level = levelMap[gate.name];
     }
 
+    
     //sort the circuit
     sort(netlist.gates.begin(), netlist.gates.end(), [](Gate& a, Gate& b) {
         return a.level < b.level;

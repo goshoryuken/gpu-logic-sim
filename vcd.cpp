@@ -15,6 +15,10 @@ void writeVCD(const string& filename, const Netlist& netlist, const vector<vecto
         file << "$var wire 1 " << g.name << " " << g.name << " $end\n";
     }
 
+    for (const Gate& g : netlist.dffs) {
+        file << "$var wire 1 " << g.name << " " << g.name << " $end\n";
+    }
+
     file << "$enddefinitions $end\n";
 
     for (int i = 0; i < allSignals.size(); i++) {
@@ -26,6 +30,10 @@ void writeVCD(const string& filename, const Netlist& netlist, const vector<vecto
         }
 
         for (const Gate& g : netlist.gates) {
+            file << allSignals[i][g.outputID] << g.name << "\n";
+        }
+
+        for (const Gate& g : netlist.dffs) {
             file << allSignals[i][g.outputID] << g.name << "\n";
         }
     }

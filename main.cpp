@@ -12,11 +12,9 @@ int main() {
     assignSignalIDs(netlist);
     levelizeNetlist(netlist);
     map<string, int> inputValues;
-    inputValues["a"] = 1;
-    inputValues["b"] = 0;
-    inputValues["c"] = 1;
-    vector<int> signals = simulate(netlist, inputValues);
-
+    inputValues["clk"] = 0;
+    vector<vector<int>> results = simulate(netlist, inputValues, 3);
+    writeVCD("output.vcd", netlist, results);
     
     
     for (int i = 0; i < netlist.inputs.size(); i++) {
@@ -39,28 +37,14 @@ int main() {
         cout << endl;
     }
 
-    for (string out : netlist.outputs) {
-        int signal_index = netlist.signalIDs[out];
-        printf("%s = %d\n", out.c_str(), signals[signal_index]);
-    }
-
 
     //testing VCD output
-    vector<vector<int>> allSignals;
+    vector<int> lastSignals = results.back();
+    for (string out : netlist.outputs) {
+        printf("%s = %d\n", out.c_str(), lastSignals[netlist.signalIDs[out]]);
+    }
 
-    map<string, int> in1;
-    in1["a"] = 0; in1["b"] = 0; in1["c"] = 0;
-    allSignals.push_back(simulate(netlist, in1));
-
-    map<string, int> in2;
-    in2["a"] = 1; in2["b"] = 0; in2["c"] = 1;
-    allSignals.push_back(simulate(netlist, in2));
-
-    map<string, int> in3;
-    in3["a"] = 1; in3["b"] = 1; in3["c"] = 0;
-    allSignals.push_back(simulate(netlist, in3));
-
-    writeVCD("output.vcd", netlist, allSignals);
+    printf("DFFs found: %d\n", netlist.dffs.size());
 
     
 }

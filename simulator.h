@@ -2,4 +2,6 @@
 #include "netlist.h"
 #include <map>
 
-vector<int> simulate(const Netlist& netlist, const map<string, int>& inputValues);
+
+vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inputValues, int numCycles);
+vector<int> oldSimulate(const Netlist& netlist, const map<string, int>& inputValues);
