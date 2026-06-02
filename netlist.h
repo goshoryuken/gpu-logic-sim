@@ -5,13 +5,16 @@ using namespace std;
 #include <vector>
 #include <map>
 
+enum GateType {AND, OR, NOT, NAND, NOR, XOR, DFF};
+
 struct Gate {
     string name;
     string type;
     vector<string> inputs;
     int level = -1;
     int outputID;
-    vector<int> inputIDs;
+    vector<int> inputIDs; 
+    int gateTypeID;
 };
 
 struct Netlist {
@@ -21,3 +24,4 @@ struct Netlist {
     vector<Gate> gates;
     vector<Gate> dffs;
 };
+

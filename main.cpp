@@ -5,6 +5,7 @@
 #include <map>
 #include "simulator.h"
 #include "vcd.h"
+#include "gpu_simulator.h"
 
 int main() {
     Netlist netlist = parseVerilog("circuit.sv");
@@ -14,7 +15,9 @@ int main() {
     map<string, int> inputValues;
     inputValues["clk"] = 0;
     vector<vector<int>> results = simulate(netlist, inputValues, 3);
+    vector<vector<int>> resultsGPU = simulateGPU(netlist, inputValues, 3);
     writeVCD("output.vcd", netlist, results);
+    
     
     
     for (int i = 0; i < netlist.inputs.size(); i++) {
@@ -46,5 +49,14 @@ int main() {
 
     printf("DFFs found: %d\n", netlist.dffs.size());
 
-    
+    //finally testing
+    printf("\ncpu output!!!\n");
+    for (int i = 0; i < results.size(); i++) {
+        printf("cycle %d: q = %d\n", i, results[i][netlist.signalIDs["q"]]);
+    }
+
+    printf("\ngpu output!!!\n");
+    for (int i = 0; i < resultsGPU.size(); i++) {
+        printf("cycle %d: q = %d\n", i, resultsGPU[i][netlist.signalIDs["q"]]);
+    } 
 }

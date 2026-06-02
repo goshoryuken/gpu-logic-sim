@@ -153,4 +153,24 @@ void assignSignalIDs(Netlist& netlist) {
             gate.inputIDs.push_back(netlist.signalIDs[s]);
         }
     }
+
+    for (Gate& gate : netlist.gates) {
+        if (gate.type == "AND") gate.gateTypeID = AND;
+        else if (gate.type == "OR") gate.gateTypeID = OR;
+        else if (gate.type == "NOT") gate.gateTypeID = NOT;
+        else if (gate.type == "NAND") gate.gateTypeID = NAND;
+        else if (gate.type == "NOR") gate.gateTypeID = NOR;
+        else if (gate.type == "XOR") gate.gateTypeID = XOR;
+        else if (gate.type == "DFF") gate.gateTypeID = DFF;
+    }
+
+    for (Gate& gate : netlist.dffs) {
+        if (gate.type == "AND") gate.gateTypeID = AND;
+        else if (gate.type == "OR") gate.gateTypeID = OR;
+        else if (gate.type == "NOT") gate.gateTypeID = NOT;
+        else if (gate.type == "NAND") gate.gateTypeID = NAND;
+        else if (gate.type == "NOR") gate.gateTypeID = NOR;
+        else if (gate.type == "XOR") gate.gateTypeID = XOR;
+        else if (gate.type == "DFF") gate.gateTypeID = DFF;
+    }
 }

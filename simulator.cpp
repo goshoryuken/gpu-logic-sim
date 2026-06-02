@@ -17,7 +17,7 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
     vector<vector<int>> results;
     vector<int> nextState(netlist.signalIDs.size(), 0);
 
-    for (int i = 0; i <= numCycles; i++) {
+    for (int i = 0; i < numCycles; i++) {
         for (const Gate& gate : netlist.gates) {
             string type = gate.type;
             int result = 0;
