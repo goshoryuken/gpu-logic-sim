@@ -6,9 +6,34 @@
 
 void replaceJunk(string& s) {
     for (char& c : s) {
-        if (c == '(' || c == ')' || c == ',' || c == ';') c = ' ';
+        if (c == '(' || c == ')' || c == ',' || c == ';' || c == '\\' || c == '\n' || c == '\r') {
+            c = ' ';
+        } 
     }
     
+}
+
+void removeCommentsAndAttributes(string& s) {
+    size_t start;
+    // remove /* ... */ comments
+    while ((start = s.find("/*")) != string::npos) {
+        size_t end = s.find("*/", start);
+        if (end != string::npos) {
+            s.erase(start, end - start + 2);
+        } else {
+            break;
+        } 
+    }
+
+    // remove (* ... *) attributes
+    while ((start = s.find("(*")) != string::npos) {
+        size_t end = s.find("*)", start);
+        if (end != string::npos) {
+            s.erase(start, end - start + 2);
+        } else {
+            break;
+        }
+    }
 }
 
 Netlist parseVerilog(const string& filename) {
@@ -16,38 +41,48 @@ Netlist parseVerilog(const string& filename) {
     string line;
 
     Netlist netlist;
-    set<string> gates = {"and", "or", "not", "nand", "nor", "xor"};
+    set<string> gates = {"$_AND_", "$_OR_", "$_NOT_", "$_NAND_", "$_NOR_", "$_XOR_", "$_XNOR_"};
+    map<string, string> aliases;
 
-    while (getline(file, line)) {
+
+    while (getline(file, line, ';')) {
+        removeCommentsAndAttributes(line);
         replaceJunk(line);
         stringstream ss(line);
         
         string word;
         
-        ss >> word; //grabs first word
+        if (!(ss >> word)) continue; //grabs first word
+
+        
 
         if (gates.count(word)) {
             
 
             Gate gate;
-            string name = word;
+            
 
-            //convert uppercase
-            for (auto& c: name) {
-                c = std::toupper(static_cast<unsigned char>(c));
-            }
 
-            gate.type = name;
+            if (word == "$_AND_") gate.type = "AND";
+            else if (word == "$_OR_") gate.type = "OR";
+            else if (word == "$_NOT_") gate.type = "NOT";
+            else if (word == "$_NAND_") gate.type = "NAND";
+            else if (word == "$_NOR_") gate.type = "NOR";
+            else if (word == "$_XOR_") gate.type = "XOR";
+            else if (word == "$_XNOR_") gate.type = "XNOR";
 
             ss >> word; //instance name, skip
-            ss >> word; //now on gate name
 
-            gate.name = word;
-
-            while (ss >> word) { //reads the rest of the line to find the inputs;
-                gate.inputs.push_back(word);
+            //.A and .B are both inputs, .Y is outputs
+            while (ss >> word) {
+                if (word == ".A" || word == ".B") {
+                    ss >> word;
+                    gate.inputs.push_back(word);
+                } else if (word == ".Y") {
+                    ss >> word;
+                    gate.name = word;
+                }
             }
-
             netlist.gates.push_back(gate);
 
         } else if (word == "input") {
@@ -60,7 +95,7 @@ Netlist parseVerilog(const string& filename) {
                 if (word == "logic") continue;
                 netlist.outputs.push_back(word);
             }
-        } else if (word == "$_DFF_P_" || word == "$_DFF_N_") { // handling DFF's
+        } else if (word == "$_DFF_P_" || word == "$_DFF_N_" || word == "$_SDFF_PP0_") { // handling DFF's
             Gate gate;
             gate.type = "DFF";
             while (ss >> word) {
@@ -70,12 +105,38 @@ Netlist parseVerilog(const string& filename) {
                 } else if (word == ".Q") {
                     ss >> word; 
                     gate.name = word;
-                } else if (word == ".C") {
+                } else if (word == ".C" || word == ".R") {
                     ss >> word;
-                }
+                } 
             }
 
             netlist.dffs.push_back(gate);
+        } else if (word == "assign") {
+            //sample line: "assign target = source"
+            ss >> word; //move on to target
+            string target = word;
+            ss >> word; //move on to =
+            ss >> word; //move on to source
+            string source = word;
+            aliases[target] = source;
+        }
+    }
+
+    for (Gate& gate : netlist.gates) {
+        if (aliases.count(gate.name)) {
+            gate.name = aliases[gate.name];
+        }
+        for (string& s : gate.inputs) {
+            if (aliases.count(s)) s = aliases[s];
+        }
+    }
+
+    for (Gate& gate : netlist.dffs) {
+        if (aliases.count(gate.name)) {
+            gate.name = aliases[gate.name];
+        }
+        for (string& s : gate.inputs) {
+            if (aliases.count(s)) s = aliases[s];
         }
     }
     return netlist;
@@ -162,6 +223,7 @@ void assignSignalIDs(Netlist& netlist) {
         else if (gate.type == "NOR") gate.gateTypeID = NOR;
         else if (gate.type == "XOR") gate.gateTypeID = XOR;
         else if (gate.type == "DFF") gate.gateTypeID = DFF;
+        else if (gate.type == "XNOR") gate.gateTypeID = XNOR;
     }
 
     for (Gate& gate : netlist.dffs) {

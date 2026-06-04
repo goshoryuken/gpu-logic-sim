@@ -12,59 +12,69 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
-__global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, int* inputOffsets, int* inputIDs, int* signals, int numGates) {
+__global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, int* inputOffsets, int* inputIDs, int* signals, int startGate, int numGates) {
+    //thread index within this specific launch
     int i = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (i >= numGates) {
         return;
     } else {
+        //calculate the actual global index of the gate we simulate
+        int gateIdx = startGate + i;
         int result = 0;
-        int type = gateTypes[i];
+        int type = gateTypes[gateIdx];
 
         if (type == AND) {
 
             result = 1;
-            for (int k = 0; k < numInputs[i]; k++) {
-                result &= signals[inputIDs[inputOffsets[i] + k]];
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result &= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
 
         } else if (type == OR) {
 
             result = 0;
-            for (int k = 0; k < numInputs[i]; k++) {
-                result |= signals[inputIDs[inputOffsets[i] + k]];
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result |= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
 
         } else if (type == NOT) {
 
             result = 0;
-            result = !signals[inputIDs[inputOffsets[i]]];
+            result = !signals[inputIDs[inputOffsets[gateIdx]]];
 
         } else if (type == NAND) {
 
             result = 1;
-            for (int k = 0; k < numInputs[i]; k++) {
-                result &= signals[inputIDs[inputOffsets[i] + k]];
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result &= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
             result = !result;
 
         } else if (type == XOR) {
 
             result = 0;
-            for (int k = 0; k < numInputs[i]; k++) {
-                result ^= signals[inputIDs[inputOffsets[i] + k]];
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result ^= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
 
         } else if (type == NOR) {
 
             result = 0;
-            for (int k = 0; k < numInputs[i]; k++) {
-                result |= signals[inputIDs[inputOffsets[i] + k]];
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result |= signals[inputIDs[inputOffsets[gateIdx] + k]];
+            }
+            result = !result;
+        } else if (type == XNOR) {
+
+            result = 0;
+            for (int k = 0; k < numInputs[gateIdx]; k++) {
+                result ^= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
             result = !result;
         }
         
-        signals[outputIDs[i]] = result;
+        signals[outputIDs[gateIdx]] = result;
     }
 }
 
@@ -97,6 +107,22 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
     vector<int> signals(netlist.signalIDs.size(), 0);
     for (auto& pair : inputValues) {
         signals[netlist.signalIDs.at(pair.first)] = pair.second;
+    }
+
+    vector<int> levelStarts;
+    vector<int> levelEnds;
+
+    if (!netlist.gates.empty()) {
+        int currentLevel = netlist.gates[0].level;
+        levelStarts.push_back(0);
+        for (int i = 0; i < netlist.gates.size(); i++) {
+            if (netlist.gates[i].level != currentLevel) {
+                levelEnds.push_back(i);
+                currentLevel = netlist.gates[i].level;
+                levelStarts.push_back(i);
+            }
+        }
+        levelEnds.push_back(netlist.gates.size());
     }
 
     int threadsPerBlock = 256;
@@ -150,16 +176,23 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
         //copying signals to GPU
         CUDA_CHECK(cudaMemcpy(device_signals, signals.data(), netlist.signalIDs.size() * sizeof(int), cudaMemcpyHostToDevice));
 
-        //Launch Kernel
-        gpu_simulator<<<numBlocks, threadsPerBlock>>>(device_types, device_outputIDs, device_inputs, device_offsets, device_inputIDs, device_signals, numGates);
+        for (int lvl = 0; lvl < levelStarts.size(); lvl++) {
+            int startGate = levelStarts[lvl];
+            int numGatesInLevel = levelEnds[lvl] - startGate;
 
-        //ensures kernel finishes before results are copied back
-        CUDA_CHECK(cudaDeviceSynchronize());
+            int blocks = (numGatesInLevel + 255) / 256;
+
+            //Launch Kernel
+            gpu_simulator<<<blocks, threadsPerBlock>>>(device_types, device_outputIDs, device_inputs, device_offsets, device_inputIDs, device_signals, startGate, numGatesInLevel);
+
+            //ensures kernel finishes before results are copied back
+            CUDA_CHECK(cudaDeviceSynchronize());
+        }
 
         //copy signals back
         CUDA_CHECK(cudaMemcpy(signals.data(), device_signals, netlist.signalIDs.size() * sizeof(int), cudaMemcpyDeviceToHost));
         
-
+        //update dffs
         for (const Gate& gate : netlist.dffs) {
             nextState[gate.outputID] = signals[gate.inputIDs[0]];
         }

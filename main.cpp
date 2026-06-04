@@ -8,12 +8,15 @@
 #include "gpu_simulator.h"
 
 int main() {
-    Netlist netlist = parseVerilog("circuit.sv");
+    try {
+
+        Netlist netlist = parseVerilog("circuit_synth.v");
 
     assignSignalIDs(netlist);
     levelizeNetlist(netlist);
     map<string, int> inputValues;
     inputValues["clk"] = 0;
+    inputValues["rst"] = 0;
     vector<vector<int>> results = simulate(netlist, inputValues, 3);
     vector<vector<int>> resultsGPU = simulateGPU(netlist, inputValues, 3);
     writeVCD("output.vcd", netlist, results);
@@ -52,11 +55,26 @@ int main() {
     //finally testing
     printf("\ncpu output!!!\n");
     for (int i = 0; i < results.size(); i++) {
-        printf("cycle %d: q = %d\n", i, results[i][netlist.signalIDs["q"]]);
+        printf("cycle %d: count = %d%d%d%d\n", i,
+            results[i][netlist.signalIDs["count[3]"]],
+            results[i][netlist.signalIDs["count[2]"]],
+            results[i][netlist.signalIDs["count[1]"]],
+            results[i][netlist.signalIDs["count[0]"]]
+        );
     }
 
     printf("\ngpu output!!!\n");
     for (int i = 0; i < resultsGPU.size(); i++) {
-        printf("cycle %d: q = %d\n", i, resultsGPU[i][netlist.signalIDs["q"]]);
-    } 
+        printf("cycle %d: count = %d%d%d%d\n", i,
+            resultsGPU[i][netlist.signalIDs["count[3]"]],
+            resultsGPU[i][netlist.signalIDs["count[2]"]],
+            resultsGPU[i][netlist.signalIDs["count[1]"]],
+            resultsGPU[i][netlist.signalIDs["count[0]"]]
+        );
+    }
+
+    } catch (const std::exception& e) {
+        std::cerr << "error: " << e.what() << std::endl;
+    }
+    
 }

@@ -64,6 +64,13 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
             }
             result = !result;
 
+        } else if (type == "XNOR") {
+
+            result = 0;
+            for (int id : gate.inputIDs) {
+                result ^= signals[id];
+            }
+            result = !result;
         }
 
         signals[gate.outputID] = result;

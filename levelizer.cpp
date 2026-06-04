@@ -34,12 +34,14 @@ void levelizeNetlist(Netlist& netlist) {
         levelMap[gate.name] = 0;
     }
 
+    int processedGates = 0;
 
     while (!q.empty()) {
         //grab the signal from the front
         string front = q.front();
         //remove
         q.pop();
+        processedGates++;
 
         //check to see if the signal is in dependents
         if (dependents.find(front) != dependents.end()) {
@@ -54,6 +56,10 @@ void levelizeNetlist(Netlist& netlist) {
                 }
             }
         }
+    }
+
+    if (processedGates < netlist.gates.size() + netlist.inputs.size() + netlist.dffs.size()) {
+        throw std::runtime_error("combinational loop detected");
     }
 
     

@@ -1,10 +1,14 @@
-module circuit(clk, q);
-  input clk;
-  output q;
-  wire d;
+module circuit(input logic clk, input logic rst, output logic[3:0] count);
+  
+  always_ff @(posedge clk) begin
+    
+    if (rst) begin
+      count <= 4'b0000;
+    end else begin
+      count <= count + 1;
+    end
 
-  $_DFF_P_ ff1 (.C(clk), .D(d), .Q(q));
-  not inv1(d, q);
+  end
 
   
 endmodule

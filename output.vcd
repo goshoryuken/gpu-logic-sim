@@ -1,17 +1,53 @@
 $timescale 1ns $end
 $var wire 1 clk clk $end
-$var wire 1 d d $end
-$var wire 1 q q $end
+$var wire 1 rst rst $end
+$var wire 1 _02_ _02_ $end
+$var wire 1 _10_ _10_ $end
+$var wire 1 _03_ _03_ $end
+$var wire 1 _11_ _11_ $end
+$var wire 1 _04_ _04_ $end
+$var wire 1 _05_ _05_ $end
+$var wire 1 count[0] count[0] $end
+$var wire 1 count[1] count[1] $end
+$var wire 1 count[2] count[2] $end
+$var wire 1 count[3] count[3] $end
 $enddefinitions $end
 #0
 0clk
-1d
-1q
+0rst
+1_02_
+0_10_
+0_03_
+1_11_
+0_04_
+0_05_
+1count[0]
+0count[1]
+0count[2]
+0count[3]
 #1
 0clk
-0d
-0q
+0rst
+0_02_
+0_10_
+1_03_
+1_11_
+0_04_
+0_05_
+0count[0]
+1count[1]
+0count[2]
+0count[3]
 #2
 0clk
-1d
-1q
+0rst
+1_02_
+0_10_
+1_03_
+1_11_
+0_04_
+0_05_
+1count[0]
+1count[1]
+0count[2]
+0count[3]
