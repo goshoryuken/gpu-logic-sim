@@ -74,7 +74,15 @@ __global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, in
             result = !result;
         } else if (type == MUX) {
             
-            result = signals[signals[inputIDs[inputOffsets[gateIdx] + 2]]] ? signals[inputIDs[inputOffsets[gateIdx] + 1]]: signals[inputIDs[inputOffsets[gateIdx]]];
+            result = signals[inputIDs[inputOffsets[gateIdx] + 2]] ? signals[inputIDs[inputOffsets[gateIdx] + 1]]: signals[inputIDs[inputOffsets[gateIdx]]];
+
+        } else if (type == ANDNOT) {
+
+            result = signals[inputIDs[inputOffsets[gateIdx]]] & !signals[inputIDs[inputOffsets[gateIdx] + 1]];
+
+        } else if (type == ORNOT) {
+
+            result = signals[inputIDs[inputOffsets[gateIdx]]] | !signals[inputIDs[inputOffsets[gateIdx] + 1]];
 
         }
         
@@ -110,7 +118,12 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
 
     vector<int> signals(netlist.signalIDs.size(), 0);
     for (auto& pair : inputValues) {
-        signals[netlist.signalIDs.at(pair.first)] = pair.second;
+        if (netlist.signalIDs.count(pair.first) > 0) {
+            signals[netlist.signalIDs.at(pair.first)] = pair.second;
+        } else {
+            // Optional warning to know what's happening
+            std::cout << "[GPU WARNING] Input '" << pair.first << "' missing! Skipping." << std::endl;
+        }
     }
 
     vector<int> levelStarts;

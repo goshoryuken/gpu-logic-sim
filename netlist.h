@@ -5,7 +5,7 @@ using namespace std;
 #include <vector>
 #include <map>
 
-enum GateType {AND, OR, NOT, NAND, NOR, XOR, DFF, XNOR, MUX};
+enum GateType {AND, OR, NOT, NAND, NOR, XOR, DFF, XNOR, MUX, ANDNOT, ORNOT};
 
 struct Gate {
     string name;

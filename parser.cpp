@@ -41,7 +41,7 @@ Netlist parseVerilog(const string& filename) {
     string line;
 
     Netlist netlist;
-    set<string> gates = {"$_AND_", "$_OR_", "$_NOT_", "$_NAND_", "$_NOR_", "$_XOR_", "$_XNOR_", "$_MUX_"};
+    set<string> gates = {"$_AND_", "$_OR_", "$_NOT_", "$_NAND_", "$_NOR_", "$_XOR_", "$_XNOR_", "$_MUX_", "$_ANDNOT_", "$_ORNOT_"};
     map<string, string> aliases;
 
 
@@ -71,6 +71,8 @@ Netlist parseVerilog(const string& filename) {
             else if (word == "$_XOR_") gate.type = "XOR";
             else if (word == "$_XNOR_") gate.type = "XNOR";
             else if (word == "$_MUX_") gate.type = "MUX";
+            else if (word == "$_ANDNOT_") gate.type = "ANDNOT";
+            else if (word == "$_ORNOT_") gate.type = "ORNOT";
 
             ss >> word; //instance name, skip
 
@@ -96,6 +98,16 @@ Netlist parseVerilog(const string& filename) {
                             tempS = word;
                             continue;
                         }
+                    } else if (gate.type == "ANDNOT" || gate.type == "ORNOT") {
+                        if (word == ".A") {
+                            ss >> word;
+                            tempA = word;
+                            continue;
+                        } else if (word == ".B") {
+                            ss >> word;
+                            tempB = word;
+                            continue;
+                        }
                     } else {
                         ss >> word;
                         gate.inputs.push_back(word);
@@ -111,6 +123,9 @@ Netlist parseVerilog(const string& filename) {
                 gate.inputs.push_back(tempA);
                 gate.inputs.push_back(tempB);
                 gate.inputs.push_back(tempS);
+            } else if (gate.type == "ANDNOT" || gate.type == "ORNOT") {
+                gate.inputs.push_back(tempA);
+                gate.inputs.push_back(tempB);
             }
             netlist.gates.push_back(gate);
 
@@ -214,25 +229,37 @@ Netlist parseNetlist(const string& filename) {
 void assignSignalIDs(Netlist& netlist) {
     int id = 0;
     for (int i = 0; i < netlist.inputs.size(); i++) {
-        netlist.signalIDs[netlist.inputs[i]] = id;
-        id++;
+        if (netlist.signalIDs.count(netlist.inputs[i]) == 0) {
+            netlist.signalIDs[netlist.inputs[i]] = id;
+            id++;
+        }
     }
 
     for (int j = 0; j < netlist.gates.size(); j++) {
-        netlist.signalIDs[netlist.gates[j].name] = id;
-        id++;
+        if (netlist.signalIDs.count(netlist.gates[j].name) == 0) {
+            netlist.signalIDs[netlist.gates[j].name] = id;
+            id++;
+        }
     }
 
     for (int k = 0; k < netlist.dffs.size(); k++) {
-        netlist.signalIDs[netlist.dffs[k].name] = id;
-        id++;
+        if (netlist.signalIDs.count(netlist.dffs[k].name) == 0) {
+            netlist.signalIDs[netlist.dffs[k].name] = id;
+            id++;
+        }
     }
 
     for (Gate& gate : netlist.gates) {
         gate.outputID = netlist.signalIDs[gate.name];
 
         for (string s : gate.inputs) {
-            gate.inputIDs.push_back(netlist.signalIDs[s]);
+            if (netlist.signalIDs.count(s) == 0) {
+                //std::cerr << "Missing signal: " << s << " in gate: " << gate.name << ". Adding to map." << std::endl;
+                // Add the missing signal to the map to prevent crashes
+                netlist.signalIDs[s] = id;
+                id++;
+            }
+            gate.inputIDs.push_back(netlist.signalIDs.at(s));
         }
     }
 
@@ -240,7 +267,13 @@ void assignSignalIDs(Netlist& netlist) {
         gate.outputID = netlist.signalIDs[gate.name];
 
         for (string s : gate.inputs) {
-            gate.inputIDs.push_back(netlist.signalIDs[s]);
+            if (netlist.signalIDs.count(s) == 0) {
+                //std::cerr << "Missing signal: " << s << " in DFF: " << gate.name << ". Adding to map." << std::endl;
+                // Add the missing signal to the map to prevent crashes
+                netlist.signalIDs[s] = id;
+                id++;
+            }
+            gate.inputIDs.push_back(netlist.signalIDs.at(s));
         }
     }
 
@@ -254,8 +287,9 @@ void assignSignalIDs(Netlist& netlist) {
         else if (gate.type == "DFF") gate.gateTypeID = DFF;
         else if (gate.type == "XNOR") gate.gateTypeID = XNOR;
         else if (gate.type == "MUX") gate.gateTypeID = MUX;
+        else if (gate.type == "ANDNOT") gate.gateTypeID = ANDNOT;
+        else if (gate.type == "ORNOT") gate.gateTypeID = ORNOT;
     }
-
     for (Gate& gate : netlist.dffs) {
         if (gate.type == "AND") gate.gateTypeID = AND;
         else if (gate.type == "OR") gate.gateTypeID = OR;

@@ -8,10 +8,15 @@
 vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inputValues, int numCycles) { //new function, can do both comb and sequential logic
 
     vector<int> signals(netlist.signalIDs.size(), 0);
-    for (auto& pair : inputValues) {
-        signals[netlist.signalIDs.at(pair.first)] = pair.second;
-    }
 
+    //checks if the input actually exists before tying to assign it
+    for (auto& pair : inputValues) {
+        if (netlist.signalIDs.count(pair.first) > 0) {
+            signals[netlist.signalIDs.at(pair.first)] = pair.second;
+        } else {
+            std::cout << "[WARNING] Input '" << pair.first << "' missing from netlist. Skipping." << std::endl;
+        }
+    }
     
 
     vector<vector<int>> results;
@@ -70,10 +75,19 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
                 result ^= signals[id];
             }
             result = !result;
+
         } else if (gate.gateTypeID == MUX) {
 
             result = signals[gate.inputIDs[2]] ? signals[gate.inputIDs[1]] : signals[gate.inputIDs[0]];
 
+        } else if (gate.gateTypeID == ANDNOT) {
+
+            result = signals[gate.inputIDs[0]] & !signals[gate.inputIDs[1]];
+
+        } else if (gate.gateTypeID == ORNOT) {
+
+            result = signals[gate.inputIDs[0]] | !signals[gate.inputIDs[1]];
+            
         }
 
         signals[gate.outputID] = result;

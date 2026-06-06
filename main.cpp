@@ -11,21 +11,31 @@
 int main() {
     try {
         // parse 
-        Netlist netlist = parseVerilog("circuit_synth.v");
+        Netlist netlist = parseVerilog("cpu_synth.v");
+        
         assignSignalIDs(netlist);
+        
+        std::cout << "Gates: " << netlist.gates.size() << " DFFs: " << netlist.dffs.size() << " Signals: " << netlist.signalIDs.size() << std::endl;
         levelizeNetlist(netlist);
+        std::cout << "IDs assigned" << std::endl;
 
         map<string, int> inputValues;
         inputValues["clk"] = 0;
-        inputValues["rst"] = 0;
+        inputValues["reset"] = 0;
+        // Force Yosys constants to their correct boolean values
+        if (netlist.signalIDs.count("1'h1")) inputValues["1'h1"] = 1;
+        if (netlist.signalIDs.count("1'h0")) inputValues["1'h0"] = 0;
+        if (netlist.signalIDs.count("1'b1")) inputValues["1'b1"] = 1;
+        if (netlist.signalIDs.count("1'b0")) inputValues["1'b0"] = 0;
 
         // benchmark parameters
-        int cycleCount = 10000; // Cranked up to give the GPU a real workload
+        int cycleCount = 100000; // Cranked up to give the GPU a real workload
 
         //cpu benchmark
         std::cout << "starting CPU Simulation for " << cycleCount << " cycles" << std::endl;
         auto startCPU = std::chrono::high_resolution_clock::now();
-        
+
+        std::cout << "Starting CPU sim" << std::endl;
         vector<vector<int>> results = simulate(netlist, inputValues, cycleCount);
         
         auto endCPU = std::chrono::high_resolution_clock::now();
