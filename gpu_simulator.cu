@@ -72,6 +72,10 @@ __global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, in
                 result ^= signals[inputIDs[inputOffsets[gateIdx] + k]];
             }
             result = !result;
+        } else if (type == MUX) {
+            
+            result = signals[signals[inputIDs[inputOffsets[gateIdx] + 2]]] ? signals[inputIDs[inputOffsets[gateIdx] + 1]]: signals[inputIDs[inputOffsets[gateIdx]]];
+
         }
         
         signals[outputIDs[gateIdx]] = result;

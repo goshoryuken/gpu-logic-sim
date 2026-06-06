@@ -41,7 +41,7 @@ Netlist parseVerilog(const string& filename) {
     string line;
 
     Netlist netlist;
-    set<string> gates = {"$_AND_", "$_OR_", "$_NOT_", "$_NAND_", "$_NOR_", "$_XOR_", "$_XNOR_"};
+    set<string> gates = {"$_AND_", "$_OR_", "$_NOT_", "$_NAND_", "$_NOR_", "$_XOR_", "$_XNOR_", "$_MUX_"};
     map<string, string> aliases;
 
 
@@ -70,18 +70,47 @@ Netlist parseVerilog(const string& filename) {
             else if (word == "$_NOR_") gate.type = "NOR";
             else if (word == "$_XOR_") gate.type = "XOR";
             else if (word == "$_XNOR_") gate.type = "XNOR";
+            else if (word == "$_MUX_") gate.type = "MUX";
 
             ss >> word; //instance name, skip
 
+            string tempA = "";
+            string tempB = "";
+            string tempS = "";
+
             //.A and .B are both inputs, .Y is outputs
             while (ss >> word) {
-                if (word == ".A" || word == ".B") {
-                    ss >> word;
-                    gate.inputs.push_back(word);
+                if (word == ".A" || word == ".B" || word == ".S") {
+                    //muxes have a simple S ? A : B order so it can be fixed, everything else gets determined in the loop.
+                    if (gate.type == "MUX") {
+                        if (word == ".A") {
+                            ss >> word;
+                            tempA = word;
+                            continue;
+                        } else if (word == ".B") {
+                            ss >> word;
+                            tempB = word;
+                            continue;
+                        } else if (word == ".S") {
+                            ss >> word;
+                            tempS = word;
+                            continue;
+                        }
+                    } else {
+                        ss >> word;
+                        gate.inputs.push_back(word);
+                    }
+                    
                 } else if (word == ".Y") {
                     ss >> word;
                     gate.name = word;
                 }
+            }
+
+            if (gate.type == "MUX") {
+                gate.inputs.push_back(tempA);
+                gate.inputs.push_back(tempB);
+                gate.inputs.push_back(tempS);
             }
             netlist.gates.push_back(gate);
 
@@ -224,6 +253,7 @@ void assignSignalIDs(Netlist& netlist) {
         else if (gate.type == "XOR") gate.gateTypeID = XOR;
         else if (gate.type == "DFF") gate.gateTypeID = DFF;
         else if (gate.type == "XNOR") gate.gateTypeID = XNOR;
+        else if (gate.type == "MUX") gate.gateTypeID = MUX;
     }
 
     for (Gate& gate : netlist.dffs) {

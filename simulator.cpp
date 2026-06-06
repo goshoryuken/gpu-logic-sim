@@ -19,29 +19,28 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
 
     for (int i = 0; i < numCycles; i++) {
         for (const Gate& gate : netlist.gates) {
-            string type = gate.type;
             int result = 0;
 
-        if (type == "AND") {
+        if (gate.gateTypeID == AND) {
 
             result = 1;
             for (int id : gate.inputIDs) {
                 result &= signals[id];
             }
 
-        } else if (type == "OR") {
+        } else if (gate.gateTypeID == OR) {
 
             result = 0;
             for (int id : gate.inputIDs) {
                 result |= signals[id];
             }
 
-        } else if (type == "NOT") {
+        } else if (gate.gateTypeID == NOT) {
 
             result = 0;
             result = !signals[gate.inputIDs[0]];
 
-        } else if (type == "NAND") {
+        } else if (gate.gateTypeID == NAND) {
 
             result = 1;
             for (int id : gate.inputIDs) {
@@ -49,14 +48,14 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
             }
             result = !result;
 
-        } else if (type == "XOR") {
+        } else if (gate.gateTypeID == XOR) {
 
             result = 0;
             for (int id : gate.inputIDs) {
                 result ^= signals[id];
             }
 
-        } else if (type == "NOR") {
+        } else if (gate.gateTypeID == NOR) {
 
             result = 0;
             for (int id : gate.inputIDs) {
@@ -64,13 +63,17 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
             }
             result = !result;
 
-        } else if (type == "XNOR") {
+        } else if (gate.gateTypeID == XNOR) {
 
             result = 0;
             for (int id : gate.inputIDs) {
                 result ^= signals[id];
             }
             result = !result;
+        } else if (gate.gateTypeID == MUX) {
+
+            result = signals[gate.inputIDs[2]] ? signals[gate.inputIDs[1]] : signals[gate.inputIDs[0]];
+
         }
 
         signals[gate.outputID] = result;
@@ -93,6 +96,8 @@ vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inp
 
 }
 
+
+//legacy function inefficient but here bc yea
 vector<int> oldSimulate(const Netlist& netlist, const map<string, int>& inputValues) { //can only do combinational
 
     vector<int> signals(netlist.signalIDs.size(), 0);
