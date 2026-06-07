@@ -11,7 +11,7 @@
 int main() {
     try {
         // parse 
-        Netlist netlist = parseVerilog("cpu_synth.v");
+        Netlist netlist = parseVerilog("circuit_synth.v");
         
         assignSignalIDs(netlist);
         
@@ -21,7 +21,7 @@ int main() {
 
         map<string, int> inputValues;
         inputValues["clk"] = 0;
-        inputValues["reset"] = 0;
+        inputValues["rst"] = 0;
         // Force Yosys constants to their correct boolean values
         if (netlist.signalIDs.count("1'h1")) inputValues["1'h1"] = 1;
         if (netlist.signalIDs.count("1'h0")) inputValues["1'h0"] = 0;
@@ -29,7 +29,7 @@ int main() {
         if (netlist.signalIDs.count("1'b0")) inputValues["1'b0"] = 0;
 
         // benchmark parameters
-        int cycleCount = 100000; // Cranked up to give the GPU a real workload
+        int cycleCount = 20; // Cranked up to give the GPU a real workload
 
         //cpu benchmark
         std::cout << "starting CPU Simulation for " << cycleCount << " cycles" << std::endl;
