@@ -1,6 +1,6 @@
 # GPU-Accelerated Logic Gate Simulator
 
-### Overview: A CUDA-accelerated gate-level circuit simulator that parses Yosys-synthesized netlists and evaluates them in parallel on the GPU, with CPU/GPU benchmarking to explore when massive parallelism actually pays off.
+### Overview: A CUDA-accelerated gate-level circuit simulator that parses Yosys-synthesized netlists and evaluates them in parallel on the GPU, with CPU/GPU benchmarking to explore the extent to which GPU parallelization pays off.
 
 ## Architecture Diagram
 
