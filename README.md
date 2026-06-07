@@ -12,7 +12,7 @@
 
 ## About
 
-A gate-level circuit simulator that does what commercial EDA tools do: evaluate synthesized Verilog netlists cycle by cycle. The specific caveat being the added ability to offload gate evaluation to NVIDIA CUDA cores for parallel execution.
+A gate-level circuit simulator that evaluates synthesized Verilog netlists cycle by cycle, with one specific caveat: the added ability to offload gate evaluation to NVIDIA CUDA cores for parallel execution.
 
 The pipeline works like this: you write Verilog/SystemVerilog, run it through Yosys to synthesize it down to individual gate primitives (`$_AND_`, `$_MUX_`, `$_DFF_P_`, etc.), then the parser reads that netlist into C++ data structures. The levelizer sorts every gate using Kahn's algorithm so that each gate is assigned a dependency level — ensuring no gate evaluates before its inputs are ready.
 
