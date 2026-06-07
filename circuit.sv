@@ -1,3 +1,5 @@
+
+// a test circuit
 module circuit(input logic clk, input logic rst, output logic[3:0] count);
   
   always_ff @(posedge clk) begin
