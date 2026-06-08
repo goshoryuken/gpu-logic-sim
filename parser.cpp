@@ -3,6 +3,7 @@
 #include <sstream>
 #include <set>
 #include <cctype>
+using namespace std;
 
 void replaceJunk(string& s) {
     for (char& c : s) {

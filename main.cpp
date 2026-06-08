@@ -6,7 +6,8 @@
 #include "simulator.h"
 #include "vcd.h"
 #include "gpu_simulator.h"
-#include <chrono> // Added for high-resolution benchmarking
+#include <chrono> // added for benchmarking
+using namespace std;
 
 int main() {
     try {

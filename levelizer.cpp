@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <queue>
 #include <set>
+using namespace std;
 
 void levelizeNetlist(Netlist& netlist) {
     map<string, int> levelMap; //temporary lookup table, maps signal names to level, used to check if a gate's inputs are ready

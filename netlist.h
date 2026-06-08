@@ -1,5 +1,4 @@
 #pragma once
-using namespace std;
 #include <iostream>
 #include <string>
 #include <vector>
@@ -8,20 +7,19 @@ using namespace std;
 enum GateType {AND, OR, NOT, NAND, NOR, XOR, DFF, XNOR, MUX, ANDNOT, ORNOT};
 
 struct Gate {
-    string name;
-    string type;
-    vector<string> inputs;
+    std::string name;
+    std::string type;
+    std::vector<std::string> inputs;
     int level = -1;
     int outputID;
-    vector<int> inputIDs; 
+    std::vector<int> inputIDs; 
     int gateTypeID;
 };
 
 struct Netlist {
-    vector<string> inputs;
-    vector<string> outputs;
-    map<string, int> signalIDs;
-    vector<Gate> gates;
-    vector<Gate> dffs;
+    std::vector<std::string> inputs;
+    std::vector<std::string> outputs;
+    std::map<std::string, int> signalIDs;
+    std::vector<Gate> gates;
+    std::vector<Gate> dffs;
 };
-

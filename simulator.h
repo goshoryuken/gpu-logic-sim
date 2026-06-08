@@ -3,5 +3,5 @@
 #include <map>
 
 
-vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inputValues, int numCycles);
-vector<int> oldSimulate(const Netlist& netlist, const map<string, int>& inputValues);
+std::vector<std::vector<int>> simulate(const Netlist& netlist, const std::map<std::string, int>& inputValues, int numCycles);
+std::vector<int> oldSimulate(const Netlist& netlist, const std::map<std::string, int>& inputValues);

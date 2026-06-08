@@ -3,6 +3,7 @@
 #include <map>
 #include <iostream>
 #include <algorithm>
+using namespace std;
 
 
 vector<vector<int>> simulate(const Netlist& netlist, const map<string, int>& inputValues, int numCycles) { //new function, can do both comb and sequential logic

@@ -1,6 +1,7 @@
 #include "vcd.h"
 #include <iostream>
 #include <fstream>
+using namespace std;
 
 void writeVCD(const string& filename, const Netlist& netlist, const vector<vector<int>>& allSignals) {
     ofstream file(filename);
