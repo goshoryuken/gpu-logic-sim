@@ -12,7 +12,20 @@ using namespace std;
 int main() {
     try {
         // parse 
-        Netlist netlist = parseVerilog("circuit_synth.v");
+        Netlist netlist = parseVerilog("cpu_synth.v");
+
+        map<string, vector<string>> drivers; // name -> gate types driving it
+        for (auto& g : netlist.gates) drivers[g.name].push_back(g.type);
+        for (auto& g : netlist.dffs)  drivers[g.name].push_back("DFF");
+
+        int dups = 0;
+        for (auto& [name, v] : drivers) {
+            if (v.size() > 1) {
+                if (++dups <= 10)
+                    std::cerr << "multi-driven: '" << name << "' x" << v.size() << "\n";
+            }
+        }
+        std::cerr << "total multi-driven nets: " << dups << "\n";
         
         assignSignalIDs(netlist);
         
@@ -22,7 +35,8 @@ int main() {
 
         map<string, int> inputValues;
         inputValues["clk"] = 0;
-        inputValues["rst"] = 0;
+        //cpu uses "reset", counter uses rst
+        inputValues["reset"] = 0;
         // Force Yosys constants to their correct boolean values
         if (netlist.signalIDs.count("1'h1")) inputValues["1'h1"] = 1;
         if (netlist.signalIDs.count("1'h0")) inputValues["1'h0"] = 0;
@@ -30,7 +44,7 @@ int main() {
         if (netlist.signalIDs.count("1'b0")) inputValues["1'b0"] = 0;
 
         // benchmark parameters
-        int cycleCount = 20; // Cranked up to give the GPU a real workload
+        int cycleCount = 100000; // Cranked up to give the GPU a real workload
 
         //cpu benchmark
         std::cout << "starting CPU Simulation for " << cycleCount << " cycles" << std::endl;
@@ -48,6 +62,18 @@ int main() {
         vector<vector<int>> resultsGPU = simulateGPU(netlist, inputValues, cycleCount);
         
         auto endGPU = std::chrono::high_resolution_clock::now();
+
+        // correctness check
+        bool match = true;
+        for (int i = 0; i < results.back().size(); i++) {
+            if (results.back()[i] != resultsGPU[0][i]) {
+                match = false;
+                std::cout << "MISMATCH at signal " << i << ": CPU=" << results.back()[i] << " GPU=" << resultsGPU[0][i] << std::endl;
+                break;
+            }
+        }
+
+        std::cout << (match ? "CPU/GPU outputs MATCH" : "CPU/GPU outputs MISMATCH") << std::endl;
 
         // calc and print results
         auto cpuTime = std::chrono::duration_cast<std::chrono::milliseconds>(endCPU - startCPU).count();

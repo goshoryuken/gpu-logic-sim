@@ -167,23 +167,47 @@ Netlist parseVerilog(const string& filename) {
         }
     }
 
+    //multi top alias resolver: follows assign chains to root signal
+    //ex: if assign A = B, and B = C exists, resolve("A") returns "C"
+    //seen set prevents infinite loop from circular aliases
+    auto resolve = [&](string s) {
+        set<string> seen;
+        while (aliases.count(s) && seen.insert(s).second) {
+            s = aliases.at(s);
+        } 
+        return s;
+    };
+
+    //resolve all gate inputs thru alias chains
+    //only INPUTS get resolved, outputs keep their og names
     for (Gate& gate : netlist.gates) {
-        if (aliases.count(gate.name)) {
-            gate.name = aliases[gate.name];
-        }
         for (string& s : gate.inputs) {
-            if (aliases.count(s)) s = aliases[s];
+            s = resolve(s);
         }
     }
 
     for (Gate& gate : netlist.dffs) {
-        if (aliases.count(gate.name)) {
-            gate.name = aliases[gate.name];
-        }
         for (string& s : gate.inputs) {
-            if (aliases.count(s)) s = aliases[s];
+            s = resolve(s);
         }
     }
+
+    //dedupe gate/DFF output names to eliminate multi-driven nets
+    //after Yosys flattens and autonames, a few gates may still share names
+    set<string> seen;
+    //iterate backwards so last gate keeps og name, earlier dupes get renamed to unique dead logic names
+    //this is for the 0.01% of wires that autoname doesn't fix.
+    for (int i = netlist.gates.size() - 1; i >= 0; i--) {
+        if (!seen.insert(netlist.gates[i].name).second) {
+            netlist.gates[i].name += "_dup" + to_string(i);
+        }
+    }
+    for (int i = netlist.dffs.size() - 1; i >= 0; i--) {
+        if (!seen.insert(netlist.dffs[i].name).second) {
+            netlist.dffs[i].name += "_dup" + to_string(i);
+        }
+    }
+    
     return netlist;
 }
 

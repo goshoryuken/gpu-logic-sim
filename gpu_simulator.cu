@@ -18,79 +18,87 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 __global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, int* inputOffsets, int* inputIDs, int* signals, int numGates,
-    int* gateLevel, int maxLevel, int numCycles, int* dff_inputs, int* dff_outputs, int numDFFs, int* nextState) {
+    int maxLevel, int numCycles, int* dff_inputs, int* dff_outputs, int numDFFs, int* nextState,
+    int* levelStart, int* levelCount) {
    
     //making the grid level cooperative group handle
     cg::grid_group grid = cg::this_grid();
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
 
     for (int i = 0; i < numCycles; i++) {
         for (int j = 0; j <= maxLevel; j++) {
-            if (tid < numGates && gateLevel[tid] == j) {
-                int type = gateTypes[tid];
+
+            int startIdx = levelStart[j];
+            int count = levelCount[j];
+
+            for (int n = tid; n < count; n += stride) {
+                int gateIdx = startIdx + n;
+
+                int type = gateTypes[gateIdx];
                 int result = 0;
 
                  if (type == AND) {
                     result = 1;
-                for (int k = 0; k < numInputs[tid]; k++) {
-                    result &= signals[inputIDs[inputOffsets[tid] + k]];
+                for (int k = 0; k < numInputs[gateIdx]; k++) {
+                    result &= signals[inputIDs[inputOffsets[gateIdx] + k]];
                 }
                 } else if (type == OR) {
 
                     result = 0;
-                    for (int k = 0; k < numInputs[tid]; k++) {
-                        result |= signals[inputIDs[inputOffsets[tid] + k]];
+                    for (int k = 0; k < numInputs[gateIdx]; k++) {
+                        result |= signals[inputIDs[inputOffsets[gateIdx] + k]];
                     }
 
                 } else if (type == NOT) {
 
                     result = 0;
-                    result = !signals[inputIDs[inputOffsets[tid]]];
+                    result = !signals[inputIDs[inputOffsets[gateIdx]]];
 
                 } else if (type == NAND) {
 
                     result = 1;
-                    for (int k = 0; k < numInputs[tid]; k++) {
-                        result &= signals[inputIDs[inputOffsets[tid] + k]];
+                    for (int k = 0; k < numInputs[gateIdx]; k++) {
+                        result &= signals[inputIDs[inputOffsets[gateIdx] + k]];
                     }
                     result = !result;
 
                 } else if (type == XOR) {
 
                     result = 0;
-                    for (int k = 0; k < numInputs[tid]; k++) {
-                        result ^= signals[inputIDs[inputOffsets[tid] + k]];
+                    for (int k = 0; k < numInputs[gateIdx]; k++) {
+                        result ^= signals[inputIDs[inputOffsets[gateIdx] + k]];
                 }
 
                 } else if (type == NOR) {
 
                     result = 0;
-                    for (int k = 0; k < numInputs[tid]; k++) {
-                        result |= signals[inputIDs[inputOffsets[tid] + k]];
+                    for (int k = 0; k < numInputs[gateIdx]; k++) {
+                        result |= signals[inputIDs[inputOffsets[gateIdx] + k]];
                     }
                     result = !result;
                 } else if (type == XNOR) {
 
                     result = 0;
-                    for (int k = 0; k < numInputs[tid]; k++) {
-                        result ^= signals[inputIDs[inputOffsets[tid] + k]];
+                    for (int k = 0; k < numInputs[gateIdx]; k++) {
+                        result ^= signals[inputIDs[inputOffsets[gateIdx] + k]];
                     }
                     result = !result;
                 } else if (type == MUX) {
             
-                    result = signals[inputIDs[inputOffsets[tid] + 2]] ? signals[inputIDs[inputOffsets[tid] + 1]]: signals[inputIDs[inputOffsets[tid]]];
+                    result = signals[inputIDs[inputOffsets[gateIdx] + 2]] ? signals[inputIDs[inputOffsets[gateIdx] + 1]]: signals[inputIDs[inputOffsets[gateIdx]]];
 
                 } else if (type == ANDNOT) {
 
-                    result = signals[inputIDs[inputOffsets[tid]]] & !signals[inputIDs[inputOffsets[tid] + 1]];
+                    result = signals[inputIDs[inputOffsets[gateIdx]]] & !signals[inputIDs[inputOffsets[gateIdx] + 1]];
 
                 } else if (type == ORNOT) {
 
-                    result = signals[inputIDs[inputOffsets[tid]]] | !signals[inputIDs[inputOffsets[tid] + 1]];
+                    result = signals[inputIDs[inputOffsets[gateIdx]]] | !signals[inputIDs[inputOffsets[gateIdx] + 1]];
 
                 }
         
-                signals[outputIDs[tid]] = result;
+                signals[outputIDs[gateIdx]] = result;
 
             }
 
@@ -100,13 +108,13 @@ __global__ void gpu_simulator(int* gateTypes, int* outputIDs, int* numInputs, in
         }
 
         //all levels done for this cycle, time for DFF update
-        if (tid < numDFFs) {
-            nextState[dff_outputs[tid]] = signals[dff_inputs[tid]];
+        for (int d = tid; d < numDFFs; d += stride) {
+            nextState[dff_outputs[d]] = signals[dff_inputs[d]];
         }
         grid.sync();
 
-        if (tid < numDFFs) {
-            signals[dff_outputs[tid]] = nextState[dff_outputs[tid]];
+        for (int d = tid; d < numDFFs; d += stride) {
+            signals[dff_outputs[d]] = nextState[dff_outputs[d]];
         }
         grid.sync();
     }
@@ -136,6 +144,20 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
     }
 
     int maxLevel = *std::max_element(gateLevels.begin(), gateLevels.end());
+
+    //tell the gpu exactly where each level begins and how many gates are in it
+    vector<int> levelStart(maxLevel + 1, 0);
+    vector<int> levelCount(maxLevel + 1, 0);
+
+    for (int i = 0; i < gateLevels.size(); i++) {
+        int lvl = gateLevels[i];
+        if (levelCount[lvl] == 0) {
+            levelStart[lvl] = i; //mark starting index for lvl
+        }
+        levelCount[lvl]++; //count how many gates in this level
+    }
+
+
     vector<int> inputOffsets;
 
     int offset = 0;
@@ -168,10 +190,19 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
     int* device_offsets = nullptr;
     int* device_signals = nullptr;
     int* device_inputs = nullptr;
-    int* device_gateLevels = nullptr;
     int* device_dff_inputs = nullptr;
     int* device_dff_outputs = nullptr;
     int* device_nextState = nullptr;
+    int* device_levelStart = nullptr;
+    int* device_levelCount = nullptr;
+
+    //for levelStart
+    CUDA_CHECK(cudaMalloc((void**)&device_levelStart, levelStart.size() * sizeof(int)));
+    CUDA_CHECK(cudaMemcpy(device_levelStart, levelStart.data(), levelStart.size() * sizeof(int), cudaMemcpyHostToDevice));
+
+    //for levelCount
+    CUDA_CHECK(cudaMalloc((void**)&device_levelCount, levelCount.size() * sizeof(int)));
+    CUDA_CHECK(cudaMemcpy(device_levelCount, levelCount.data(), levelCount.size() * sizeof(int), cudaMemcpyHostToDevice));
 
     //for gateTypes
     CUDA_CHECK(cudaMalloc((void**)&device_types, netlist.gates.size() * sizeof(int))); 
@@ -201,12 +232,6 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
 
     CUDA_CHECK(cudaMalloc((void**)&device_inputIDs, inputIDs.size() * sizeof(int))); 
     CUDA_CHECK(cudaMemcpy(device_inputIDs, inputIDs.data(), inputIDs.size() * sizeof(int), cudaMemcpyHostToDevice));
-
-
-    //for gateLevels
-
-    CUDA_CHECK(cudaMalloc((void**)&device_gateLevels, netlist.gates.size() * sizeof(int))); 
-    CUDA_CHECK(cudaMemcpy(device_gateLevels, gateLevels.data(), netlist.gates.size() * sizeof(int), cudaMemcpyHostToDevice));
 
     //for dff_inputs
 
@@ -253,23 +278,26 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
         &device_inputIDs,
         &device_signals,
         &numGates,
-        &device_gateLevels,
         &maxLevel,
         &numCycles,
         &device_dff_inputs,
         &device_dff_outputs,
         &numDFFs,
-        &device_nextState
+        &device_nextState,
+        &device_levelStart,
+        &device_levelCount
     };
     
-    cudaLaunchCooperativeKernel(
+    CUDA_CHECK(cudaLaunchCooperativeKernel(
         (void*)gpu_simulator,
         dimGrid,
         dimBlock,
         kernelArgs,
         0,
         nullptr
-    );
+    ));
+    
+    CUDA_CHECK(cudaGetLastError());
 
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -289,8 +317,9 @@ vector<vector<int>> simulateGPU(const Netlist& netlist, const map<string, int>& 
     CUDA_CHECK(cudaFree(device_offsets));
     CUDA_CHECK(cudaFree(device_dff_inputs));
     CUDA_CHECK(cudaFree(device_dff_outputs));
-    CUDA_CHECK(cudaFree(device_gateLevels));
     CUDA_CHECK(cudaFree(device_nextState));
+    CUDA_CHECK(cudaFree(device_levelStart));
+    CUDA_CHECK(cudaFree(device_levelCount));
 
     return results;
 }
