@@ -16,7 +16,7 @@ A gate-level circuit simulator that evaluates synthesized Verilog netlists cycle
 
 The pipeline works like this: you write Verilog/SystemVerilog, run it through Yosys to synthesize it down to individual gate primitives (`$_AND_`, `$_MUX_`, `$_DFF_P_`, etc.), then the parser reads that netlist into C++ data structures. The levelizer sorts every gate using Kahn's algorithm so that each gate is assigned a dependency level, which ensures that no gate evaluates before its inputs are ready.
 
-From there, the circuit can run on either the CPU or GPU. The CPU evaluates gates sequentially in level order. The GPU flattens the entire netlist into integer arrays (`gateTypes[]`, `inputIDs[]`, `outputIDs[]`, `inputOffsets[]`, `signals[]`), copies them to device memory, and launches one CUDA kernel per logic level, which evaluates all gates in that level in parallel. DFF updates happen on the CPU between clock cycles.
+From there, the circuit can run on either the CPU or GPU. The CPU evaluates gates sequentially in level order. The GPU flattens the entire netlist into integer arrays (`gateTypes[]`, `inputIDs[]`, `outputIDs[]`, `inputOffsets[]`, `signals[]`), copies them to device memory, and launches a single persistent CUDA kernel for the entire simulation. Grid-stride loops allow a fixed number of threads to process arbitrarily many gates per level. Instead of returning to the CPU after every level, threads synchronize on-device using `grid.sync()` barriers via CUDA Cooperative Groups, then move to the next level. All cycles and DFF updates stay on-device, with signals never leaving GPU memory until the final results are copied back.
 
 Results are written to a VCD file for waveform viewing in GTKWave. Benchmarking was done on a Ryzen 5 7600X and RTX 3060 Ti.
 
@@ -121,4 +121,7 @@ nvcc -rdc=true -std=c++17 -Xcompiler "/std:c++17 /Zc:preprocessor" main.cpp pars
 - The v1 implementation, where one kernel launched per level every single cycle displayed how the GPU isn't automatically "faster" even if it has way more cores. 
 
 ## Known Limitations
--
+- GPU speedup depends on circuit width (gates per level), not just total gate count — narrow/deep circuits may not saturate GPU threads
+- No support for tri-state buffers, latches, or multi-clock domains
+- VCD output is generated from CPU results only
+- Memory elements (ROM/RAM) must be synthesized to gate-level by Yosys; large memories will explode gate count
